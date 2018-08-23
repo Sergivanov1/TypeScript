@@ -231,14 +231,16 @@
 ////
 ////var shwvar = 1;
 
-interface GotoMarkVerifyOptions {
-    isClassScope?: boolean;
-    isTypeLocation?: boolean;
-    insideMod1?: boolean;
-    isNewIdentifierLocation?: boolean;
+interface VerifyGeneralOptions {
+    readonly isClassScope?: boolean;
+    readonly isTypeLocation?: boolean;
+    readonly insideMod1?: boolean;
+    readonly isNewIdentifierLocation?: boolean;
+    readonly moreIncludes?: ReadonlyArray<FourSlashInterface.ExpectedCompletionEntry>;
+    readonly moreExcludes?: ReadonlyArray<string>;
 }
 
-function goToMarkAndGeneralVerify(marker: string, { isClassScope, isTypeLocation, insideMod1, isNewIdentifierLocation }: GotoMarkVerifyOptions = {}) {
+function verifyGeneral(marker: string, { isClassScope, isTypeLocation, insideMod1, isNewIdentifierLocation, moreIncludes, moreExcludes }: VerifyGeneralOptions = {}) {
     const mod1Dot = insideMod1 ? "" : "mod1.";
 
     const valueInModule: ReadonlyArray<FourSlashInterface.ExpectedCompletionEntry> = [
@@ -271,6 +273,7 @@ function goToMarkAndGeneralVerify(marker: string, { isClassScope, isTypeLocation
             ...(isClassScope || isTypeLocation ? [] : valueInModule),
             ...(isClassScope ? [] : valueOrTypeInModule),
             ...(isTypeLocation ? typeInModule : []),
+            ...(moreIncludes || []),
         ],
         excludes: [
             "mod2var",
@@ -295,25 +298,32 @@ function goToMarkAndGeneralVerify(marker: string, { isClassScope, isTypeLocation
             "sifn",
             "mod1exvar",
             "mod2eexvar",
+            ...(moreExcludes || []),
         ],
         isNewIdentifierLocation,
     });
 }
 
 // from mod1
-goToMarkAndGeneralVerify('mod1', { insideMod1: true });
+verifyGeneral('mod1', { insideMod1: true });
 // from mod1 in type position
-goToMarkAndGeneralVerify('mod1Type', { isTypeLocation: true, insideMod1: true });
+verifyGeneral('mod1Type', { isTypeLocation: true, insideMod1: true });
 
 // from function in mod1
-goToMarkAndGeneralVerify('function', { insideMod1: true });
-verify.completionListContains('bar', '(local var) bar: number');
-verify.completionListContains('foob', '(local function) foob(): void');
+verifyGeneral('function', {
+    insideMod1: true,
+    moreIncludes: [
+        { name: "bar", text: "(local var) bar: number" },
+        { name: "foob", text: "(local function) foob(): void" },
+    ],
+});
 
 // from class in mod1
-goToMarkAndGeneralVerify('class', { isClassScope: true, isNewIdentifierLocation: true });
-//verify.not.completionListContains('ceFunc');
-//verify.not.completionListContains('ceVar');
+verifyGeneral('class', {
+    isClassScope: true,
+    isNewIdentifierLocation: true,
+    moreExcludes: ["ceFunc", "ceVar"],
+});
 
 // from interface in mod1
 verify.completionsAt("interface", ["readonly"], { isNewIdentifierLocation: true });
@@ -323,7 +333,7 @@ verifyNamespaceInMod1('namespace');
 verifyNamespaceInMod1('namespaceType', /*isTypeLocation*/ true);
 
 function verifyNamespaceInMod1(marker: string, isTypeLocation?: boolean) {
-    goToMarkAndGeneralVerify(marker, { isTypeLocation, insideMod1: true });
+    verifyGeneral(marker, { isTypeLocation, insideMod1: true });
 
     const values: ReadonlyArray<FourSlashInterface.ExpectedCompletionEntry> = [
         { name: "m1X", text: "var m1X: number" },
@@ -346,24 +356,28 @@ function verifyNamespaceInMod1(marker: string, isTypeLocation?: boolean) {
 }
 
 // from exported function in mod1
-goToMarkAndGeneralVerify('exportedFunction', { insideMod1: true });
-verify.completionListContains('bar', '(local var) bar: number');
-verify.completionListContains('foob', '(local function) foob(): void');
+verifyGeneral('exportedFunction', {
+    insideMod1: true,
+    moreIncludes: [
+        { name: "bar", text: "(local var) bar: number" },
+        { name: "foob", text: "(local function) foob(): void" },
+    ],
+});
 
 // from exported class in mod1
-goToMarkAndGeneralVerify('exportedClass', { isClassScope: true, isNewIdentifierLocation: true });
-verify.not.completionListContains('ceFunc');
-verify.not.completionListContains('ceVar');
+verifyGeneral('exportedClass', {
+    isClassScope: true,
+    isNewIdentifierLocation: true,
+    moreExcludes: ["ceFunc", "ceVar"],
+});
 
 // from exported interface in mod1
-verify.completionsAt("exportedInterface", ["readonly"], { isNewIdentifierLocation: true });
+verify.completions({ marker: "exportedInterface", exact: ["readonly"], isNewIdentifierLocation: true });
 
 // from exported namespace in mod1
 verifyExportedNamespace('exportedNamespace');
 verifyExportedNamespace('exportedNamespaceType', /*isTypeLocation*/ true);
 function verifyExportedNamespace(marker: string, isTypeLocation?: boolean) {
-    goToMarkAndGeneralVerify(marker, { isTypeLocation, insideMod1: true });
-
     const values: ReadonlyArray<FourSlashInterface.ExpectedCompletionEntry> = [
         { name: "mX", text: "var mX: number" },
         { name: "mFunc", text: "function mFunc(): void" },
@@ -374,14 +388,15 @@ function verifyExportedNamespace(marker: string, isTypeLocation?: boolean) {
         { name: "mInt", text: "interface mInt" },
         { name: "meInt", text: "interface meInt" },
     ];
-    verify.completions({
-        includes: [
+    verifyGeneral(marker, {
+        isTypeLocation,
+        insideMod1: true,
+        moreIncludes: [
             ...(isTypeLocation ? types : values),
             { name: "mClass", text: "class mClass" },
             { name: "meClass", text: "class meClass" },
-
         ],
-        excludes: ["mMod", "meMod"],
+        moreExcludes: ["mMod", "meMod"],
     });
 }
 
@@ -437,5 +452,3 @@ function verifyExtendedNamespace(marker: string, isTypeLocation?: boolean) {
         ],
     });
 }
-
-throw new Error("TODONEATER");

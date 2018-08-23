@@ -3996,12 +3996,6 @@ namespace FourSlashInterface {
 
     export class VerifyNegatable {
         public not: VerifyNegatable;
-        public allowedConstructorParameterKeywords = [//!
-            "public",
-            "private",
-            "protected",
-            "readonly",
-        ];
 
         constructor(protected state: FourSlash.TestState, private negative = false) {
             if (!negative) {
@@ -4039,12 +4033,6 @@ namespace FourSlashInterface {
 
         public completionListIsEmpty() {
             this.state.verifyCompletionListIsEmpty(this.negative);
-        }
-
-        public completionListContainsConstructorParameterKeywords() {
-            for (const keyword of this.allowedConstructorParameterKeywords) {
-                this.completionListContains(keyword, keyword, /*documentation*/ undefined, "keyword");
-            }
         }
 
         public completionListIsGlobal(expected: boolean) {
@@ -4738,11 +4726,14 @@ namespace FourSlashInterface {
         }
         export const keywords: ReadonlyArray<string> = res;
 
-        export const typeKeywords: ReadonlyArray<string> =
+        export const typeKeywords: ReadonlyArray<string> = //keywords like below
             ["null", "void", "any", "boolean", "keyof", "never", "number", "object", "string", "symbol", "undefined", "unique", "unknown"];
 
-        export const classElementKeywords: ReadonlyArray<string> =
+        export const classElementKeywords: ReadonlyArray<string> = //keywords like below
             ["private", "protected", "public", "static", "abstract", "async", "constructor", "get", "readonly", "set"];
+
+        export const constructorParameterKeywords: ReadonlyArray<ExpectedCompletionEntry> =
+            ["private", "protected", "public", "readonly"].map((name): ExpectedCompletionEntry => ({ name, kind: "keyword" }));
     }
 
     export interface ReferenceGroup {
@@ -4767,8 +4758,8 @@ namespace FourSlashInterface {
         readonly isRecommended?: boolean; // If not specified, will assert that this is false.
         readonly kind?: string, // If not specified, won't assert about this
         readonly kindModifiers?: string;
-        readonly text: string;
-        readonly documentation: string;
+        readonly text?: string;
+        readonly documentation?: string;
         readonly sourceDisplay?: string;
     };
     export interface CompletionsAtOptions extends Partial<ts.UserPreferences> {
